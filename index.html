@@ -402,12 +402,9 @@
     const SUPABASE_URL = 'https://zjdzromqcoqspiggjpyl.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_FBjlTnZlLiXRWQVJggCUJQ_QWoHDrzH';
 
-const SUPABASE_URL = 'https://zjdzromqcoqspiggjpyl.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_FBjlTnZlLiXRWQVJggCUJQ_QWoHDrzH';
-
-const isConfigured =
-  SUPABASE_URL.startsWith('https://') &&
-  SUPABASE_ANON_KEY.startsWith('sb_publishable_');
+    const isConfigured =
+        SUPABASE_URL.startsWith('https://') &&
+        SUPABASE_ANON_KEY.startsWith('sb_publishable_');
 
     const db = isConfigured
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
