@@ -340,10 +340,6 @@
   </style>
 </head>
 <body>
-  <div>
-    <div class="setup-note" id="setupNote">
-      <strong>Supabase sync mode:</strong> Replace <code>https://zjdzromqcoqspiggjpyl.supabase.co</code> and <code>https://zjdzromqcoqspiggjpyl.supabase.co/rest/v1/</code> in the script. Once connected, your tasks and notes sync across devices through this page link.
-    </div>
 
     <main class="dashboard">
       <section class="widget" aria-label="Pastel pixel to-do list">
@@ -417,7 +413,6 @@ const isConfigured =
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
       : null;
 
-    const setupNote = document.getElementById('setupNote');
     const form = document.getElementById('taskForm');
     const input = document.getElementById('taskInput');
     const list = document.getElementById('todoList');
@@ -480,7 +475,6 @@ const isConfigured =
         return;
       }
 
-      setupNote.style.display = 'none';
       tasks = taskData || [];
       notes = noteData || [];
       renderTasks();
