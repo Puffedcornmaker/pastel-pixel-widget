@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pastel Pixel To-Do & Notes</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #fff7fb;
+      --panel: #fffdf7;
+      --pink: #ffd6e8;
+      --peach: #ffdfc7;
+      --mint: #c9f4df;
+      --blue: #cde7ff;
+      --lavender: #ded4ff;
+      --ink: #5f5672;
+      --muted: #8d7fa4;
+      --shadow: #d8c6e8;
+      --line: #8d7fa4;
+      --danger: #ff9fc9;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(255,214,232,.45) 1px, transparent 1px),
+        linear-gradient(rgba(205,231,255,.45) 1px, transparent 1px),
+        var(--bg);
+      background-size: 18px 18px;
+      font-family: "Courier New", monospace;
+    }
+
+    .dashboard {
+      width: min(100%, 1080px);
+      display: grid;
+      grid-template-columns: minmax(300px, 430px) 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .widget {
+      border: 4px solid var(--line);
+      background: var(--panel);
+      box-shadow: 10px 10px 0 var(--shadow);
+      image-rendering: pixelated;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 4px solid var(--line);
+      background: linear-gradient(90deg, var(--pink), var(--blue), var(--mint));
+    }
+
+    h1, h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: .5px;
+      text-shadow: 2px 2px 0 rgba(255,255,255,.8);
+    }
+
+    .pixel-heart {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+      background: var(--pink);
+      box-shadow:
+        6px 0 var(--pink),
+        12px 0 var(--pink),
+        18px 0 transparent,
+        0 6px var(--pink),
+        6px 6px #ff9fc9,
+        12px 6px #ff9fc9,
+        18px 6px var(--pink),
+        6px 12px #ff9fc9,
+        12px 12px #ff9fc9,
+        12px 18px var(--pink);
+    }
+
+    .pixel-star {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 auto;
+      background: #ffb9d7;
+      box-shadow:
+        6px 0 #ffb9d7,
+        -6px 0 #ffb9d7,
+        0 6px #ffb9d7,
+        0 -6px #ffb9d7,
+        6px 6px var(--peach),
+        -6px -6px var(--lavender);
+    }
+
+    .content { padding: 18px; }
+
+    .add-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 13px 14px;
+      border: 3px solid var(--line);
+      background: #ffffff;
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+      box-shadow: 4px 4px 0 var(--peach);
+    }
+
+    textarea {
+      min-height: 170px;
+      resize: vertical;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    input:focus, textarea:focus { box-shadow: 4px 4px 0 var(--lavender); }
+
+    button {
+      border: 3px solid var(--line);
+      background: var(--mint);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 700;
+      padding: 10px 16px;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 var(--blue);
+    }
+
+    button:hover { transform: translate(1px, 1px); box-shadow: 3px 3px 0 var(--blue); }
+    button:active { transform: translate(4px, 4px); box-shadow: none; }
+    button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+    .small-button {
+      padding: 7px 10px;
+      font-size: 12px;
+      background: var(--pink);
+      box-shadow: 3px 3px 0 var(--lavender);
+    }
+
+    .todo-list, .notes-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .todo-list { min-height: 86px; }
+
+    .task {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 3px solid var(--line);
+      background: #fff;
+      box-shadow: 4px 4px 0 var(--pink);
+      animation: pop .18s ease-out;
+    }
+
+    .task:nth-child(3n + 1), .note-card:nth-child(3n + 1) { box-shadow: 4px 4px 0 var(--pink); }
+    .task:nth-child(3n + 2), .note-card:nth-child(3n + 2) { box-shadow: 4px 4px 0 var(--blue); }
+    .task:nth-child(3n + 3), .note-card:nth-child(3n + 3) { box-shadow: 4px 4px 0 var(--mint); }
+
+    .checkbox {
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      margin: 0;
+      border: 3px solid var(--line);
+      background: #fffdf7;
+      box-shadow: 3px 3px 0 var(--lavender);
+      cursor: pointer;
+    }
+
+    .checkbox:checked {
+      background:
+        linear-gradient(45deg, transparent 38%, var(--ink) 39% 54%, transparent 55%),
+        linear-gradient(-45deg, transparent 45%, var(--ink) 46% 60%, transparent 61%),
+        var(--mint);
+    }
+
+    .task.done {
+      opacity: 0;
+      transform: scale(.92) translateY(-8px);
+      transition: .22s ease;
+    }
+
+    .empty, .status {
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      border: 3px dashed var(--line);
+      background: #fffafc;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .status.error {
+      color: #a45d72;
+      border-color: var(--danger);
+      background: #fff4f8;
+    }
+
+    .footer, .note-tools {
+      margin-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .sparkle { color: #ff9fc9; }
+
+    .note-form {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .note-title-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .note-card {
+      position: relative;
+      border: 3px solid var(--line);
+      background: #ffffff;
+      padding: 13px;
+      animation: pop .18s ease-out;
+    }
+
+    .note-card::before {
+      content: "";
+      position: absolute;
+      top: -8px;
+      left: 18px;
+      width: 36px;
+      height: 14px;
+      border: 3px solid var(--line);
+      background: var(--peach);
+      box-shadow: 2px 2px 0 rgba(141,127,164,.35);
+    }
+
+    .note-card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+      margin-top: 6px;
+      margin-bottom: 8px;
+    }
+
+    .note-title {
+      font-weight: 700;
+      font-size: 15px;
+      overflow-wrap: anywhere;
+    }
+
+    .note-date {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .note-body {
+      max-height: 135px;
+      overflow: auto;
+      padding: 10px;
+      border: 2px dashed var(--lavender);
+      background: #fffafc;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .note-card.expanded .note-body { max-height: 360px; }
+
+    .note-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .notes-list {
+      max-height: 520px;
+      overflow: auto;
+      padding: 8px 4px 8px 0;
+    }
+
+    .setup-note {
+      width: min(100%, 1080px);
+      margin-bottom: 18px;
+      border: 3px solid var(--line);
+      background: #fffdf7;
+      box-shadow: 6px 6px 0 var(--lavender);
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    code {
+      background: #fff4f8;
+      padding: 2px 5px;
+      border: 1px solid var(--pink);
+    }
+
+    @keyframes pop {
+      from { transform: scale(.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    @media (max-width: 860px) {
+      .dashboard { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="setup-note" id="setupNote">
+      <strong>Supabase sync mode:</strong> Replace <code>https://zjdzromqcoqspiggjpyl.supabase.co</code> and <code>https://zjdzromqcoqspiggjpyl.supabase.co/rest/v1/</code> in the script. Once connected, your tasks and notes sync across devices through this page link.
+    </div>
+
+    <main class="dashboard">
+      <section class="widget" aria-label="Pastel pixel to-do list">
+        <div class="topbar">
+          <h1>♡ Pixel To-Do</h1>
+          <div class="pixel-heart" aria-hidden="true"></div>
+        </div>
+
+        <div class="content">
+          <form class="add-row" id="taskForm">
+            <input id="taskInput" type="text" placeholder="Type a new task..." autocomplete="off" />
+            <button id="taskButton" type="submit">Add</button>
+          </form>
+
+          <div class="todo-list" id="todoList"></div>
+
+          <div class="footer">
+            <span><span class="sparkle">✦</span> check a task to make it disappear</span>
+            <span id="count">0 tasks</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="widget" aria-label="Pastel pixel pinned notes">
+        <div class="topbar">
+          <h2>✧ Pinned Notes</h2>
+          <div class="pixel-star" aria-hidden="true"></div>
+        </div>
+
+        <div class="content">
+          <form class="note-form" id="noteForm">
+            <div class="note-title-row">
+              <input id="noteTitle" type="text" placeholder="Meeting title / quick label..." autocomplete="off" />
+              <button id="noteButton" type="submit">Pin</button>
+            </div>
+            <textarea id="noteBody" placeholder="Write longer notes, thoughts, decisions, action points, or meeting minutes here..."></textarea>
+          </form>
+
+          <div class="notes-list" id="notesList"></div>
+
+          <div class="note-tools">
+            <span><span class="sparkle">✦</span> long notes stay scrollable and expandable</span>
+            <span id="noteCount">0 notes</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    /*************************************************************
+      SUPABASE SETUP
+
+      1. Create a Supabase project.
+      2. In Supabase SQL Editor, run the SQL at the bottom of this file.
+      3. Replace these two values with your project URL and anon public key.
+      4. Host this HTML file and embed the hosted link in Notion.
+    *************************************************************/
+
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+    const isConfigured =
+      SUPABASE_URL !== 'YOUR_SUPABASE_URL' &&
+      SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
+
+    const db = isConfigured
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+
+    const setupNote = document.getElementById('setupNote');
+    const form = document.getElementById('taskForm');
+    const input = document.getElementById('taskInput');
+    const list = document.getElementById('todoList');
+    const count = document.getElementById('count');
+    const taskButton = document.getElementById('taskButton');
+
+    const noteForm = document.getElementById('noteForm');
+    const noteTitle = document.getElementById('noteTitle');
+    const noteBody = document.getElementById('noteBody');
+    const notesList = document.getElementById('notesList');
+    const noteCount = document.getElementById('noteCount');
+    const noteButton = document.getElementById('noteButton');
+
+    let tasks = [];
+    let notes = [];
+
+    function setLoading(isLoading) {
+      taskButton.disabled = isLoading;
+      noteButton.disabled = isLoading;
+      taskButton.textContent = isLoading ? '...' : 'Add';
+      noteButton.textContent = isLoading ? '...' : 'Pin';
+    }
+
+    function showStatus(container, message, type = 'normal') {
+      container.innerHTML = '';
+      const status = document.createElement('div');
+      status.className = type === 'error' ? 'status error' : 'status';
+      status.innerHTML = message;
+      container.appendChild(status);
+    }
+
+    function updateCount() {
+      count.textContent = `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`;
+    }
+
+    function updateNoteCount() {
+      noteCount.textContent = `${notes.length} ${notes.length === 1 ? 'note' : 'notes'}`;
+    }
+
+    async function loadData() {
+      if (!isConfigured) {
+        showStatus(list, 'Supabase is not connected yet.<br>Replace the URL and anon key first.', 'error');
+        showStatus(notesList, 'Your synced notes will appear here once Supabase is connected.', 'error');
+        return;
+      }
+
+      setLoading(true);
+
+      const [{ data: taskData, error: taskError }, { data: noteData, error: noteError }] = await Promise.all([
+        db.from('pixel_tasks').select('*').eq('is_done', false).order('created_at', { ascending: false }),
+        db.from('pixel_notes').select('*').order('created_at', { ascending: false })
+      ]);
+
+      setLoading(false);
+
+      if (taskError || noteError) {
+        showStatus(list, 'Could not load tasks.<br>Check your Supabase table names and policies.', 'error');
+        showStatus(notesList, 'Could not load notes.<br>Check your Supabase setup.', 'error');
+        console.error(taskError || noteError);
+        return;
+      }
+
+      setupNote.style.display = 'none';
+      tasks = taskData || [];
+      notes = noteData || [];
+      renderTasks();
+      renderNotes();
+    }
+
+    function renderTasks() {
+      list.innerHTML = '';
+
+      if (tasks.length === 0) {
+        showStatus(list, 'No tasks yet!<br>Today is soft, cute, and conquerable.');
+        updateCount();
+        return;
+      }
+
+      tasks.forEach((task) => {
+        const row = document.createElement('label');
+        row.className = 'task';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'checkbox';
+        checkbox.setAttribute('aria-label', `Complete ${task.task_text}`);
+
+        const text = document.createElement('span');
+        text.textContent = task.task_text;
+
+        checkbox.addEventListener('change', async () => {
+          row.classList.add('done');
+
+          const { error } = await db
+            .from('pixel_tasks')
+            .update({ is_done: true })
+            .eq('id', task.id);
+
+          if (error) {
+            row.classList.remove('done');
+            alert('Could not complete this task. Please try again.');
+            console.error(error);
+            return;
+          }
+
+          setTimeout(() => {
+            tasks = tasks.filter((item) => item.id !== task.id);
+            renderTasks();
+          }, 220);
+        });
+
+        row.appendChild(checkbox);
+        row.appendChild(text);
+        list.appendChild(row);
+      });
+
+      updateCount();
+    }
+
+    function formatDate(dateString) {
+      return new Date(dateString).toLocaleString([], {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function renderNotes() {
+      notesList.innerHTML = '';
+
+      if (notes.length === 0) {
+        showStatus(notesList, 'No pinned notes yet!<br>Pin meeting notes for quick side reference.');
+        updateNoteCount();
+        return;
+      }
+
+      notes.forEach((note) => {
+        const card = document.createElement('article');
+        card.className = 'note-card';
+
+        const header = document.createElement('div');
+        header.className = 'note-card-header';
+
+        const titleWrap = document.createElement('div');
+        const title = document.createElement('div');
+        title.className = 'note-title';
+        title.textContent = note.title || 'Untitled note';
+
+        const date = document.createElement('span');
+        date.className = 'note-date';
+        date.textContent = formatDate(note.created_at);
+
+        titleWrap.appendChild(title);
+        titleWrap.appendChild(date);
+
+        const actions = document.createElement('div');
+        actions.className = 'note-actions';
+
+        const expandButton = document.createElement('button');
+        expandButton.type = 'button';
+        expandButton.className = 'small-button';
+        expandButton.textContent = 'Expand';
+        expandButton.addEventListener('click', () => {
+          card.classList.toggle('expanded');
+          expandButton.textContent = card.classList.contains('expanded') ? 'Collapse' : 'Expand';
+        });
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'small-button';
+        deleteButton.textContent = 'Unpin';
+        deleteButton.addEventListener('click', async () => {
+          const { error } = await db
+            .from('pixel_notes')
+            .delete()
+            .eq('id', note.id);
+
+          if (error) {
+            alert('Could not unpin this note. Please try again.');
+            console.error(error);
+            return;
+          }
+
+          notes = notes.filter((item) => item.id !== note.id);
+          renderNotes();
+        });
+
+        actions.appendChild(expandButton);
+        actions.appendChild(deleteButton);
+
+        const body = document.createElement('div');
+        body.className = 'note-body';
+        body.textContent = note.body || '';
+
+        header.appendChild(titleWrap);
+        header.appendChild(actions);
+        card.appendChild(header);
+        card.appendChild(body);
+        notesList.appendChild(card);
+      });
+
+      updateNoteCount();
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!isConfigured) return alert('Please connect Supabase first.');
+
+      const value = input.value.trim();
+      if (!value) return;
+
+      taskButton.disabled = true;
+      const { data, error } = await db
+        .from('pixel_tasks')
+        .insert({ task_text: value })
+        .select()
+        .single();
+
+      taskButton.disabled = false;
+
+      if (error) {
+        alert('Could not add task. Please check Supabase setup.');
+        console.error(error);
+        return;
+      }
+
+      tasks.unshift(data);
+      input.value = '';
+      renderTasks();
+    });
+
+    noteForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!isConfigured) return alert('Please connect Supabase first.');
+
+      const title = noteTitle.value.trim() || 'Untitled note';
+      const body = noteBody.value.trim();
+      if (!title && !body) return;
+
+      noteButton.disabled = true;
+      const { data, error } = await db
+        .from('pixel_notes')
+        .insert({ title, body })
+        .select()
+        .single();
+
+      noteButton.disabled = false;
+
+      if (error) {
+        alert('Could not pin note. Please check Supabase setup.');
+        console.error(error);
+        return;
+      }
+
+      notes.unshift(data);
+      noteTitle.value = '';
+      noteBody.value = '';
+      renderNotes();
+    });
+
+    loadData();
+
+    /*************************************************************
+      SUPABASE SQL
+
+      Run this in Supabase → SQL Editor → New query.
+      This simple version allows anyone with your widget link to read,
+      add, complete, and delete items. That is convenient for private
+      personal use, but do not share the link publicly.
+
+      create table pixel_tasks (
+        id uuid primary key default gen_random_uuid(),
+        task_text text not null,
+        is_done boolean not null default false,
+        created_at timestamptz not null default now()
+      );
+
+      create table pixel_notes (
+        id uuid primary key default gen_random_uuid(),
+        title text not null default 'Untitled note',
+        body text,
+        created_at timestamptz not null default now()
+      );
+
+      alter table pixel_tasks enable row level security;
+      alter table pixel_notes enable row level security;
+
+      create policy "Public read tasks"
+      on pixel_tasks for select
+      using (true);
+
+      create policy "Public insert tasks"
+      on pixel_tasks for insert
+      with check (true);
+
+      create policy "Public update tasks"
+      on pixel_tasks for update
+      using (true);
+
+      create policy "Public read notes"
+      on pixel_notes for select
+      using (true);
+
+      create policy "Public insert notes"
+      on pixel_notes for insert
+      with check (true);
+
+      create policy "Public delete notes"
+      on pixel_notes for delete
+      using (true);
+    *************************************************************/
+  </script>
+</body>
+</html>
